@@ -20,10 +20,16 @@ REPO_DIR = Path(__file__).resolve().parents[1]
 FOLDER_EMOJI = "\U0001F4C1"
 
 
-def api(path):
+def api(path, payload=None):
     req = urllib.request.Request(
         "https://api.notion.com/v1" + path,
-        headers={"Authorization": f"Bearer {TOKEN}", "Notion-Version": "2022-06-28"},
+        data=json.dumps(payload).encode() if payload is not None else None,
+        headers={
+            "Authorization": f"Bearer {TOKEN}",
+            "Notion-Version": "2022-06-28",
+            "Content-Type": "application/json",
+        },
+        method="POST" if payload is not None else "GET",
     )
     with urllib.request.urlopen(req) as r:
         return json.load(r)
@@ -93,13 +99,81 @@ def block_md(b, indent=0):
     elif t == "image":
         url = d.get("file", {}).get("url") or d.get("external", {}).get("url", "")
         lines.append(f"![image]({url})")
+    elif t in ("bookmark", "embed", "link_preview"):
+        url = d.get("url", "")
+        cap = rt(d.get("caption", []))
+        if url:
+            lines.append(pre + f"[{cap or url}]({url})")
+    elif t in ("file", "pdf", "video"):
+        url = d.get("file", {}).get("url") or d.get("external", {}).get("url", "")
+        cap = rt(d.get("caption", []))
+        if url:
+            lines.append(pre + f"[{cap or url}]({url})")
+    elif t == "child_database":
+        lines += database_md(b["id"])
     elif t == "child_page":
-        return []
+        lines.append(pre + "## " + b["child_page"].get("title", "Untitled"))
+        for c in children(b["id"]):
+            lines += block_md(c, indent)
+        return lines
     elif txt:
         lines.append(pre + txt)
     if b.get("has_children") and t not in ("code", "child_page"):
         for c in children(b["id"]):
             lines += block_md(c, indent + 1)
+    return lines
+
+
+def database_md(db_id):
+    try:
+        db = api(f"/databases/{db_id}")
+    except Exception:
+        return []
+    props = db.get("properties", {})
+    names = [n for n, p in props.items() if p["type"] == "title"]
+    names += sorted(n for n, p in props.items() if p["type"] != "title")
+    rows, cursor = [], None
+    while True:
+        payload = {"page_size": 100}
+        if cursor:
+            payload["start_cursor"] = cursor
+        data = api(f"/databases/{db_id}/query", payload)
+        rows += data["results"]
+        if not data.get("has_more"):
+            break
+        cursor = data["next_cursor"]
+
+    def cell(p):
+        t = p.get("type", "")
+        v = p.get(t)
+        if t in ("title", "rich_text"):
+            return rt(v or [])
+        if t == "select":
+            return (v or {}).get("name", "")
+        if t == "multi_select":
+            return ", ".join(x.get("name", "") for x in (v or []))
+        if t == "number":
+            return "" if v is None else str(v)
+        if t == "checkbox":
+            return "O" if v else ""
+        if t == "date":
+            return (v or {}).get("start", "") or ""
+        if t == "url":
+            return v or ""
+        return ""
+
+    lines = []
+    dbtitle = rt(db.get("title", []))
+    if dbtitle:
+        lines.append(f"**{dbtitle}**")
+    lines.append("| " + " | ".join(names) + " |")
+    lines.append("|" + "---|" * len(names))
+    for r in rows:
+        cells = []
+        for n in names:
+            c = cell(r.get("properties", {}).get(n, {}))
+            cells.append(c.replace("|", "\\|").replace("\n", " "))
+        lines.append("| " + " | ".join(cells) + " |")
     return lines
 
 

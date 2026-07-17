@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: "50 14 * * *"  # 23:50 KST
   workflow_dispatch:
+    inputs:
+      message:
+        description: "커밋 메시지 (비우면 기본 메시지)"
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -21,8 +26,12 @@ jobs:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
         run: python scripts/notion_til_sync.py
       - name: Commit and push
+        env:
+          MSG_INPUT: ${{ github.event.inputs.message }}
         run: |
           git config user.name "TIL Sync"
           git config user.email "siheun9@gmail.com"
+          MSG="$MSG_INPUT"
+          [ -z "$MSG" ] && MSG="TIL sync: $(TZ=Asia/Seoul date +%F)"
           git add -A
-          git diff --cached --quiet || { git commit -m "TIL sync: $(TZ=Asia/Seoul date +%F)"; git push; }
+          git diff --cached --quiet || { git commit -m "$MSG"; git push; }
