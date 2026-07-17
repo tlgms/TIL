@@ -1,9 +1,10 @@
 """Notion TIL page -> markdown files.
 
 Convention: on the root TIL page, each callout with a 📁 emoji icon is a
-folder. Pages inside that callout (nested child pages or links to Notion
-pages) become <folder>/<title>.md. Only 📁 folders are managed; other
-files in the repo are never touched.
+folder (wherever it is — inside columns too). A 📁 callout nested in
+another 📁 callout is a subfolder. Pages inside a callout (nested child
+pages or links to Notion pages) become <folder>/.../<title>.md.
+Only 📁 folders are managed; other files in the repo are never touched.
 """
 import json
 import os
@@ -16,6 +17,7 @@ from pathlib import Path
 TOKEN = os.environ["NOTION_TOKEN"]
 ROOT_PAGE = "39f2cdd741ac81269110e55addbc9396"
 REPO_DIR = Path(__file__).resolve().parents[1]
+FOLDER_EMOJI = "\U0001F4C1"
 
 
 def api(path):
@@ -126,9 +128,23 @@ def sanitize(name):
     return re.sub(r'[\\/:*?"<>|]', "-", name).strip() or "Untitled"
 
 
-def collect_page_ids(callout_children):
+def is_folder_callout(b):
+    if b.get("type") != "callout":
+        return False
+    icon = b["callout"].get("icon") or {}
+    return icon.get("type") == "emoji" and icon.get("emoji") == FOLDER_EMOJI
+
+
+def callout_name(b):
+    plain = "".join(t.get("plain_text", "") for t in b["callout"].get("rich_text", []))
+    if not plain.strip():
+        return ""
+    return sanitize(plain.strip().splitlines()[0].strip())
+
+
+def collect_page_ids(blocks):
     ids = {}
-    for k in callout_children:
+    for k in blocks:
         if k["type"] == "child_page":
             ids[k["id"].replace("-", "")] = k["child_page"]["title"]
             continue
@@ -143,29 +159,40 @@ def collect_page_ids(callout_children):
     return ids
 
 
+def walk(blocks, prefix, out):
+    """Find 📁 callouts anywhere (columns, toggles, nested callouts)."""
+    for b in blocks:
+        if is_folder_callout(b):
+            name = callout_name(b)
+            if not name:
+                continue
+            path = prefix + [name]
+            kids = children(b["id"]) if b.get("has_children") else []
+            out.append((path, collect_page_ids([k for k in kids if not is_folder_callout(k)])))
+            walk([k for k in kids if is_folder_callout(k)], path, out)
+        elif b["type"] == "child_page":
+            continue
+        elif b.get("has_children"):
+            walk(children(b["id"]), prefix, out)
+
+
 def main():
+    folders = []
+    walk(children(ROOT_PAGE), [], folders)
+    for top in {p[0] for p, _ in folders}:
+        target = REPO_DIR / top
+        if target.exists():
+            shutil.rmtree(target)
     changed = []
-    for b in children(ROOT_PAGE):
-        if b["type"] != "callout":
-            continue
-        icon = b["callout"].get("icon") or {}
-        if icon.get("type") != "emoji" or icon.get("emoji") != "\U0001F4C1":
-            continue
-        plain = "".join(t.get("plain_text", "") for t in b["callout"].get("rich_text", []))
-        folder = sanitize(plain.strip().splitlines()[0] if plain.strip() else "")
-        if not folder or folder == "Untitled":
-            continue
-        kids = children(b["id"]) if b.get("has_children") else []
-        ids = collect_page_ids(kids)
-        out_dir = REPO_DIR / folder
-        if out_dir.exists():
-            shutil.rmtree(out_dir)
-        out_dir.mkdir(parents=True)
+    for path, ids in folders:
+        out_dir = REPO_DIR.joinpath(*path)
+        out_dir.mkdir(parents=True, exist_ok=True)
         for pid, title in ids.items():
             title = title or page_title(pid)
-            path = out_dir / (sanitize(title) + ".md")
-            path.write_text(page_md(pid, title), encoding="utf-8")
-            changed.append(str(path.relative_to(REPO_DIR)))
+            f = out_dir / (sanitize(title) + ".md")
+            f.write_text(page_md(pid, title), encoding="utf-8")
+            changed.append(str(f.relative_to(REPO_DIR)))
+    print(f"Folders: {[' / '.join(p) for p, _ in folders]}")
     print("Synced files:")
     for c in changed:
         print(" -", c)
