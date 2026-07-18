@@ -1,23 +1,27 @@
 """Notion TIL page -> markdown files.
 
 Convention: on the root TIL page, each callout with a 📁 emoji icon is a
-folder (wherever it is — inside columns too). A 📁 callout nested in
-another 📁 callout is a subfolder. Pages inside a callout (nested child
-pages or links to Notion pages) become <folder>/.../<title>.md.
-Only 📁 folders are managed; other files in the repo are never touched.
+folder (anywhere on the page, including columns). A 📁 callout nested in
+another 📁 callout is a subfolder. Pages inside a callout become
+<folder>/.../<title>.md. Notion-hosted images/files are downloaded to
+assets/ with stable names (block id) so re-runs produce no diff.
+Only 📁 folders and assets/ are managed; other repo files are untouched.
 """
 import json
 import os
 import re
 import shutil
 import sys
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
 TOKEN = os.environ["NOTION_TOKEN"]
 ROOT_PAGE = "39f2cdd741ac81269110e55addbc9396"
 REPO_DIR = Path(__file__).resolve().parents[1]
+ASSETS_DIR = REPO_DIR / "assets"
 FOLDER_EMOJI = "\U0001F4C1"
+USED_ASSETS = set()
 
 
 def api(path, payload=None):
@@ -69,7 +73,32 @@ def rt(rich):
     return out
 
 
-def block_md(b, indent=0):
+def is_notion_hosted(url):
+    return "X-Amz-" in url or "notion-static" in url or "prod-files-secure" in url
+
+
+def asset_url(url, block_id, out_dir):
+    """Download a Notion-hosted file once, return a stable relative path."""
+    if not url:
+        return url
+    if not is_notion_hosted(url):
+        return url
+    ext = Path(urllib.parse.urlparse(url).path).suffix or ".bin"
+    name = block_id.replace("-", "") + ext.lower()
+    target = ASSETS_DIR / name
+    USED_ASSETS.add(name)
+    if not target.exists():
+        try:
+            ASSETS_DIR.mkdir(exist_ok=True)
+            with urllib.request.urlopen(url) as r:
+                target.write_bytes(r.read())
+        except Exception:
+            return url
+    rel = os.path.relpath(target, out_dir)
+    return urllib.parse.quote(rel.replace(os.sep, "/"))
+
+
+def block_md(b, indent=0, out_dir=REPO_DIR):
     t = b["type"]
     d = b.get(t, {})
     pre = "  " * indent
@@ -98,7 +127,7 @@ def block_md(b, indent=0):
         lines.append("---")
     elif t == "image":
         url = d.get("file", {}).get("url") or d.get("external", {}).get("url", "")
-        lines.append(f"![image]({url})")
+        lines.append(f"![image]({asset_url(url, b['id'], out_dir)})")
     elif t in ("bookmark", "embed", "link_preview"):
         url = d.get("url", "")
         cap = rt(d.get("caption", []))
@@ -108,19 +137,19 @@ def block_md(b, indent=0):
         url = d.get("file", {}).get("url") or d.get("external", {}).get("url", "")
         cap = rt(d.get("caption", []))
         if url:
-            lines.append(pre + f"[{cap or url}]({url})")
+            lines.append(pre + f"[{cap or url}]({asset_url(url, b['id'], out_dir)})")
     elif t == "child_database":
         lines += database_md(b["id"])
     elif t == "child_page":
         lines.append(pre + "## " + b["child_page"].get("title", "Untitled"))
         for c in children(b["id"]):
-            lines += block_md(c, indent)
+            lines += block_md(c, indent, out_dir)
         return lines
     elif txt:
         lines.append(pre + txt)
     if b.get("has_children") and t not in ("code", "child_page"):
         for c in children(b["id"]):
-            lines += block_md(c, indent + 1)
+            lines += block_md(c, indent + 1, out_dir)
     return lines
 
 
@@ -185,10 +214,10 @@ def page_title(pid):
     return "Untitled"
 
 
-def page_md(pid, title):
+def page_md(pid, title, out_dir):
     body = []
     for b in children(pid):
-        md = block_md(b)
+        md = block_md(b, 0, out_dir)
         if md:
             body += md + [""]
     return (
@@ -264,8 +293,14 @@ def main():
         for pid, title in ids.items():
             title = title or page_title(pid)
             f = out_dir / (sanitize(title) + ".md")
-            f.write_text(page_md(pid, title), encoding="utf-8")
+            f.write_text(page_md(pid, title, out_dir), encoding="utf-8")
             changed.append(str(f.relative_to(REPO_DIR)))
+    if ASSETS_DIR.exists():
+        for f in ASSETS_DIR.iterdir():
+            if f.is_file() and re.fullmatch(r"[0-9a-f]{32}\.\w+", f.name) and f.name not in USED_ASSETS:
+                f.unlink()
+        if not any(ASSETS_DIR.iterdir()):
+            ASSETS_DIR.rmdir()
     print(f"Folders: {[' / '.join(p) for p, _ in folders]}")
     print("Synced files:")
     for c in changed:
