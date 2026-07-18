@@ -1,4 +1,4 @@
-<!-- notion-page-id: 39f2cdd741ac807a876ce06ec1ba6c04 -->
+<!-- notion-page-id: 3a12cdd741ac803487eccf1e963d1360 -->
 
 # CORS 정책의 한계와 백엔드 보안
 
