@@ -17,6 +17,14 @@ flowchart LR
 
 OSI 7 Layer ↔ DoD 모델 ↔ 구현체 대응 관계:
 
+
+| 구분 | OSI 7 Layer | DoD | 구현 |
+|---|---|---|---|
+| user mode | L7 (← http) | Application | Process |
+| kernel mode | L4 Transport — *port 번호* | Transport | TCP/IP |
+| kernel mode | L3 Network — *IP 주소* | Network | TCP/IP |
+| H/W | ~ L1 — *Mac (식별자)* | Access | Driver / **NIC** |
+
 ```mermaid
 flowchart LR
     subgraph OSI["OSI 7 Layer"]

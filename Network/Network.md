@@ -6,6 +6,14 @@
 
 ## 계층별 식별자와 구현
 
+
+| 구분 | 식별자 | Layer | 구현 |
+|---|---|---|---|
+| U (user) |  | L7 ← http |  |
+| K (kernel) | Port | L4 | TCP ┐ |
+| K (kernel) | IP | L3 | IP ┘ → 서로 계층이 다르지만 TCP/IP로 함께 불림 |
+| H/W | MAC | L2 | Ethernet(유선), 802.11~(무선) |
+
 ```mermaid
 flowchart LR
     subgraph U["user mode"]
@@ -70,3 +78,11 @@ flowchart LR
 ```
 
 ### 계층별 대표 프로토콜
+
+
+| TCP/IP 계층 | 프로토콜 |
+|---|---|
+| application | http, FTP, DNS, SMTP |
+| 전송 계층 | TCP, UDP |
+| 인터넷 계층 | IP, ICMP, ARP |
+| 네트워크 접근 계층 | Network Access, Ethernet, Wi-Fi … |

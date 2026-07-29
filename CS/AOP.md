@@ -40,6 +40,16 @@ OOP에서는 모듈화를 하기 위해 상속을 사용했다. 하지만 부가
 
 @Around : 실제 부가 기능 구현
 
+
+| PointCut | 설명 |
+|---|---|
+| execution(public * *(..)) | public 메소드 실행 |
+| execution(* get*(..)) | 이름이 get으로 시작하는 모든 메소드명 실행 |
+| execution(* com.xyz.service.*.*(..)) | service 패키지의 모든 메소드 실행 |
+| bean(*) | 모든 빈 |
+| bean(account*) | 이름이 account로 시작되는 모든 빈 |
+| bean(**dataSource) \|\| bean(* *DataSource) | 이름이 “dataSource” 나 “DataSource” 으로 끝나는 모든 빈 |
+
 ```java
 @Aspect 
 @Component 

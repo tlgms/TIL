@@ -34,6 +34,27 @@ public interface PersonRepository extends CrudRepository<엔티티 타입, 식�
 
 ### |  Repository 메소드 
 
+
+| 메소드 | 설명 |
+|---|---|
+| save() | 새로운 엔티티는 저장하고 이미 있는 엔티티는 병합한다. |
+| saveAll(List<>) | 객체 목록을 모두 테이블에 저장 |
+| delete() | id(기본키) 속성값과 일치하는 레코드 삭제 |
+| deleteAll(List<>) | 모든 레코드 삭제 및 객체 목록을 테이블에서 삭제 |
+| count() | 레코드의 갯수 |
+| exists(id) | id에 해당하는 레코드가 있는지 true/false를 리턴 |
+| findAll() | 전체 레코드 불러오기. 정렬(sort), 페이징(pageable) 가능 |
+| findById(id) | 기본키 필드 값이 id인 엔티티 하나를 조회한다. |
+
 findBy
+
+
+| 메소드 | 설명 |
+|---|---|
+| Like /  NotLike | [퍼지검색] 인수에 지정된 텍스트를 포함하거나 포함하지 않는 엔티티 검색 |
+| StartingWith / EndingWith | 텍스트 값에서 인수에 지정된 텍스트로 시작하거나 끝나는 것 검색 findByNameStartingWith("A")이라면, name의 값이 "A"로 시작하는 항목을 검색한다. |
+| IsNull / IsNotNull | 값이 null 이거나, 혹은 null이 아닌 것을 검색한다. 인수는 필요없다. "fundByNameIsNull()"이라면, name의 값이 null인 것만 검색한다. |
+| LessThan / GreaterThan | 숫자 값으로 사용한다. 그 항목의 값이 인수보다 작거나 큰 것을 검색한다. "findByAgeLessThan(20)"이라면, age의 값이 20보다 작은 것을 찾는다. |
+| Between | 두 값을 인수로 가지고 그 두 값 사이의 것을 검색한다. 예를 들어, "findByAgeBetween(10, 20)"라고 한다면 age의 값이 10이상 20이하인 것을 검색한다. |
 
 - 퍼지검색 : 검색키워드가 정확하지 않아도 예상하여 적절한 단어를 찾는 검색 방식

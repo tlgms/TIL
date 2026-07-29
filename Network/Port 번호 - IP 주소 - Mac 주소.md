@@ -25,6 +25,13 @@ flowchart LR
 
 각 식별자가 가리키는 대상:
 
+
+| 식별자 | 계층 | 식별 대상 |
+|---|---|---|
+| port 번호 | 전송 (kernel mode) | Service? / Process? |
+| IP 주소 (v4, v6) | Net (kernel mode) | host |
+| Mac 주소 | H/W | NIC (LAN 카드, 유선/무선) → 인터넷에 연결된 컴퓨터 |
+
 ### 포스트잇 메모
 
 - 노트북 ← NIC 2개 (유선/무선) → **Mac 주소 2개**

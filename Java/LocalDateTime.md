@@ -7,11 +7,23 @@
 이 클래스는 Util패키지 안에 있는 클래스이며, 날짜 및 시각 정보를 관리하는 클래스이다.
 
 - 생성자
+
+| 생성자 | 설명 |
+|---|---|
+| Date() | 디폴트 생성자로, 현재의 날짜와 시간을 가진 객체생성 |
+| Date(long date) | 기준시로 부터 date(밀리세컨드)를 더한 날짜/시간 값을 담음 |
   - Date()에 들어가는 매개변수 값에 따라 다른 내용을 담는다
     - Date(int year, int month, int date, int hrs, int min, int sec) // 년, 월, 일, 시, 분, 초
       매개변수에 들어간 형식대로 담는다.
 
 - 주요 메소드
+
+| 메소드 | 설명 |
+|---|---|
+| long getTime() | Date 객체의 시간을 long타임으로 리턴 |
+| void setTime(long time) | Date 객체의 시간을 매개변수로 받은 시간으로 변경 |
+| boolean before(Date when) | when의 날짜가 현재 날짜 이전이면 true, 아니면 false를 반환 |
+| boolean after(Date when) | when의 날짜가 현재 날짜 이후이면 true, 아니면 false를 반환 |
 
 **문제점**
 
@@ -40,11 +52,24 @@ LocalDate nowDate = LocalDate.now(); // 현재 날짜를 저장
 LocalDate Date = LocalDate.of(2022, 1, 30); // 인자 값의 날짜를 저장
 ```
   메소드
+
+| 메소드 | 설명 |
+|---|---|
+| int getYear() | 해당 날짜의 연도를 반환 |
+| Month getMonth() | 해당 날짜의 월을 Month 열거체를 이용하여 반환 |
+| int getMonthValue() | 해당 날짜의 월을 반환 (1~12) |
+| int getDayOfMonth() | 해당 날짜의 달별 일을 반환(1~31) |
+| int getDayOfYear() | 해당 날짜의 일을 반환 (1~365) |
   현재 달의 첫번째, 마지막 날짜 구하기
 ```java
 LocalDate.now().with(TemporalAdjusters.firstDayOfMonth());
 LocalDate.now().with(TemporalAdjusters.lastDayOfMonth());
 ```
+
+| 메소드 | 설명 |
+|---|---|
+| firstDayOfMonth | 해달 달의 첫번째 날짜를 반환 |
+| lastDayOfMonth | 해달 달의 마지막 날짜를 반환 |
 
 1. **LocalTime 클래스**
 ```java
@@ -55,6 +80,13 @@ LocalTime curTime = LocalTime.now();
 LocalDateTime targetDateTime = LocalDateTime.of(curDate, curTime);
 ```
   메소드
+
+| 메소드 | 설명 |
+|---|---|
+| int getHour() | 해당 시간의 시를 반환 |
+| int getMinute() | 해당 시간의 분을 반환 |
+| int getSecond() | 해당 시간의 초를 반환 |
+| int getNano() | 해당 시간의 나노초를 반환 |
 
 1. **LocalDateTime 클래스**
 ```java
