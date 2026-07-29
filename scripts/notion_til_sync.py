@@ -138,6 +138,8 @@ def block_md(b, indent=0, out_dir=REPO_DIR):
         cap = rt(d.get("caption", []))
         if url:
             lines.append(pre + f"[{cap or url}]({asset_url(url, b['id'], out_dir)})")
+    elif t == "table":
+        return table_md(b)
     elif t == "child_database":
         lines += database_md(b["id"])
     elif t == "child_page":
@@ -151,6 +153,35 @@ def block_md(b, indent=0, out_dir=REPO_DIR):
         for c in children(b["id"]):
             lines += block_md(c, indent + 1, out_dir)
     return lines
+
+
+def table_md(b):
+    """Notion simple table (table block + table_row children) -> GFM table.
+
+    Rendered flush left even when nested (columns, toggles, callouts): an
+    indented table is not a table in markdown.
+    """
+    d = b["table"]
+    rows = [r for r in children(b["id"]) if r["type"] == "table_row"]
+    if not rows:
+        return []
+    width = d.get("table_width") or max(len(r["table_row"]["cells"]) for r in rows)
+
+    def row_md(r, bold_first):
+        vals = [rt(c).replace("|", "\\|").replace("\n", " ") for c in r["table_row"]["cells"]]
+        vals = (vals + [""] * width)[:width]
+        if bold_first and vals[0]:
+            vals[0] = f"**{vals[0]}**"
+        return "| " + " | ".join(vals) + " |"
+
+    body_start = 1 if d.get("has_column_header") else 0
+    head = (
+        row_md(rows[0], False)
+        if body_start
+        else "| " + " | ".join([""] * width) + " |"
+    )
+    bold = bool(d.get("has_row_header"))
+    return ["", head, "|" + "---|" * width] + [row_md(r, bold) for r in rows[body_start:]]
 
 
 def database_md(db_id):
