@@ -87,7 +87,7 @@ async function getFruits() {
 
 # 에러 처리하는 법… 전에 reject 반환하는 법
 
-`async`를 사용하면 반환값이`Promise`객체로 감싸져 반환되지만, 그럼 싹다 fulfilled(성공) 상태의 Promise로 처리된다.
+`async`를 사용하면 반환값이 `Promise`객체로 감싸져 반환되지만, 그럼 싹다 fulfilled(성공) 상태의 Promise로 처리된다.
 그렇기 떄문에 따로 이를 Rejected(거부) 상태의 `Promise`를 반환하도록 처리해야한다.
 
 ## 1. `throw` 문 사용하기
