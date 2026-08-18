@@ -133,3 +133,9 @@ model User {
 ```javascript
 npx prisma db push
 ```
+
+- 엔티티 DB 동기화
+
+```sql
+npx prisma generate
+```
