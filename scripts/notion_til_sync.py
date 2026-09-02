@@ -12,6 +12,8 @@ import os
 import re
 import shutil
 import sys
+import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
@@ -22,9 +24,22 @@ REPO_DIR = Path(__file__).resolve().parents[1]
 ASSETS_DIR = REPO_DIR / "assets"
 FOLDER_EMOJI = "\U0001F4C1"
 USED_ASSETS = set()
+MIN_INTERVAL = 0.34  # Notion allows ~3 requests/second
+RETRY_CODES = (429, 500, 502, 503, 504)
+MAX_ATTEMPTS = 6
+_last_call = 0.0
+
+
+def throttle():
+    global _last_call
+    wait = _last_call + MIN_INTERVAL - time.monotonic()
+    if wait > 0:
+        time.sleep(wait)
+    _last_call = time.monotonic()
 
 
 def api(path, payload=None):
+    """Call the Notion API, pacing requests and retrying on 429/5xx."""
     req = urllib.request.Request(
         "https://api.notion.com/v1" + path,
         data=json.dumps(payload).encode() if payload is not None else None,
@@ -35,8 +50,25 @@ def api(path, payload=None):
         },
         method="POST" if payload is not None else "GET",
     )
-    with urllib.request.urlopen(req) as r:
-        return json.load(r)
+    for attempt in range(MAX_ATTEMPTS):
+        throttle()
+        try:
+            with urllib.request.urlopen(req, timeout=60) as r:
+                return json.load(r)
+        except urllib.error.HTTPError as e:
+            if e.code not in RETRY_CODES or attempt == MAX_ATTEMPTS - 1:
+                raise
+            try:
+                delay = float(e.headers.get("Retry-After") or 0)
+            except ValueError:
+                delay = 0.0
+            delay = delay or 2 ** attempt
+        except (urllib.error.URLError, TimeoutError):
+            if attempt == MAX_ATTEMPTS - 1:
+                raise
+            delay = 2 ** attempt
+        print(f"retry {attempt + 1}/{MAX_ATTEMPTS} in {delay:.0f}s: {path}", file=sys.stderr)
+        time.sleep(delay)
 
 
 def children(block_id):
