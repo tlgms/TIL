@@ -2,7 +2,7 @@ name: TIL Sync
 
 on:
   schedule:
-    - cron: "50 13 * * *"  # 23:50 KST
+    - cron: "50 10 * * *"  # 23:50 KST
   workflow_dispatch:
     inputs:
       message:
