@@ -41,12 +41,13 @@ import java.util.Collections;
 
         String username = claims.getSubject();
         String role = claims.get("role", String.class);
+ 
 
         // Security가 인식할 수 있는 Authority 객체 생성
         var authorities = Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role));
 
         // UserDetails 구현체 대신 간단히 UsernamePasswordAuthenticationToken 생성
-        return new UsernamePasswordAuthenticationToken(username, "", authorities);
+        return new UsernamePasswordAuthticationToken(username, "", authorities);
     }
 ```
 
